@@ -11654,7 +11654,8 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
             scrollCache.scrollBar = new ScrollBarDrawable();
         }
 
-        if (isHorizontalScrollBarEnabled() || isVerticalScrollBarEnabled()) {
+        if (isHorizontalScrollBarEnabled() ||
+                (isVerticalScrollBarEnabled() && !isVerticalScrollBarHidden())) {
 
             // not start fadeOut animation if no scrollBar need to be drawn
             scrollCache.scrollBar.setParameters(computeVerticalScrollRange(),
