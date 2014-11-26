@@ -307,13 +307,13 @@ public class VideoView extends SurfaceView
 
     public void stopPlayback() {
         if (mMediaPlayer != null) {
+            Log.i(TAG, "Playback Stop begin");
             mMediaPlayer.stop();
             mMediaPlayer.release();
             mMediaPlayer = null;
             mCurrentState = STATE_IDLE;
             mTargetState  = STATE_IDLE;
-            AudioManager am = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
-            am.abandonAudioFocus(null);
+            Log.i(TAG, "Playback Stop end");
         }
     }
 
@@ -322,6 +322,9 @@ public class VideoView extends SurfaceView
             // not ready for playback just yet, will try again later
             return;
         }
+
+        Log.i(TAG, "Open Video");
+
         // we shouldn't clear the target state, because somebody might have
         // called start() previously
         release(false);
@@ -353,6 +356,7 @@ public class VideoView extends SurfaceView
             mMediaPlayer.setOnInfoListener(mInfoListener);
             mMediaPlayer.setOnBufferingUpdateListener(mBufferingUpdateListener);
             mCurrentBufferPercentage = 0;
+            Log.i(TAG, "SetDataSource");
             mMediaPlayer.setDataSource(mContext, mUri, mHeaders);
             mMediaPlayer.setDisplay(mSurfaceHolder);
             mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -768,8 +772,10 @@ public class VideoView extends SurfaceView
     @Override
     public void start() {
         if (isInPlaybackState()) {
+            Log.i(TAG, "Playback Start begin");
             mMediaPlayer.start();
             mCurrentState = STATE_PLAYING;
+            Log.i(TAG, "Playback Start end");
         }
         mTargetState = STATE_PLAYING;
     }
@@ -786,6 +792,7 @@ public class VideoView extends SurfaceView
     }
 
     public void suspend() {
+        Log.i(TAG, "Playback Suspend begin");
         // HTTP streaming will call MediaPlayer::suspend() for suspend operation, others will call release()
         if (isHTTPStreaming(mUri) && mCurrentState > STATE_PREPARING &&
                 mCurrentState < STATE_PLAYBACK_COMPLETED && mMediaPlayer != null) {
@@ -796,6 +803,7 @@ public class VideoView extends SurfaceView
             }
         }
         release(false);
+        Log.i(TAG, "Playback Suspend end");
     }
 
     public void resume() {
