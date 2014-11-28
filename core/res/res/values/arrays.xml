@@ -528,6 +528,70 @@
         <item>中文 (繁體)</item>
     </string-array>
 
+    <!-- User display names for app ops codes -->
+    <string-array name="app_ops_labels">
+        <item>Trying to access location</item>
+        <item>Trying to access location</item>
+        <item>Trying to access location</item>
+        <item>Trying to use vibrate</item>
+        <item>Trying to read contacts</item>
+        <item>Trying to write contacts</item>
+        <item>Trying to read call log</item>
+        <item>Trying to write call log</item>
+        <item>Trying to read calendar</item>
+        <item>Trying to write calendar</item>
+        <item>Trying to access location</item>
+        <item>Trying to post notification</item>
+        <item>Trying to access location</item>
+        <item>Trying to make phone call</item>
+        <item>Trying to read SMS</item>
+        <item>Trying to write SMS</item>
+        <item>Trying to receive SMS</item>
+        <item>Trying to receive emergency SMS</item>
+        <item>Trying to receive MMS</item>
+        <item>Trying to receive WAP push</item>
+        <item>Trying to send SMS</item>
+        <item>Trying to read ICC SMS</item>
+        <item>Trying to write ICC SMS</item>
+        <item>Trying to modify settings</item>
+        <item>Trying to draw on top</item>
+        <item>Trying to access notifications</item>
+        <item>Trying to access Camera</item>
+        <item>Trying to record audio</item>
+        <item>Trying to play audio</item>
+        <item>Trying to read clipboard</item>
+        <item>Trying to modify clipboard</item>
+        <item>Trying to use media buttons</item>
+        <item>Trying to use audio focus</item>
+        <item>Trying to use master volume</item>
+        <item>Trying to use voice volume</item>
+        <item>Trying to use ring volume</item>
+        <item>Trying to use media volume</item>
+        <item>Trying to use alarm volume</item>
+        <item>Trying to use notification volume</item>
+        <item>Trying to use bluetooth volume</item>
+        <item>Trying to Keep device awake</item>
+        <item>Trying to access location</item>
+        <item>Trying to access location</item>
+        <item>Trying to get usage stats</item>
+        <item>Trying to mute microphone</item>
+        <item>Trying to toast window</item>
+        <item>Trying to project media</item>
+        <item>Trying to activate vpn</item>
+        <item>Trying to turn on/off Wifi</item>
+        <item>Trying to trun on/off bluetooth</item>
+        <item>Trying to send MMS</item>
+        <item>Trying to read MMS</item>
+        <item>Trying to write MMS</item>
+        <item>Trying to start at bootup</item>
+        <item>Trying to turn on/off NFC</item>
+        <item>Trying to delete SMS</item>
+        <item>Trying to delete MMS</item>
+        <item>Trying to delete contacts</item>
+        <item>Trying to delete call log</item>
+        <item>Trying to turn on mobile data</item>
+    </string-array>
+
     <!-- Defines the shutdown options shown in the reboot dialog. -->
     <array name="shutdown_reboot_options" translatable="false">
         <item>@string/reboot_reboot</item>
@@ -544,70 +608,6 @@
         <item>recovery</item>
         <item>bootloader</item>
      </string-array>
-
-    <!-- User display names for app ops codes -->
-    <string-array name="app_ops_labels">
-        <item>access location</item>
-        <item>access location</item>
-        <item>access location</item>
-        <item>use vibrate</item>
-        <item>read contacts</item>
-        <item>modify contacts</item>
-        <item>read call log</item>
-        <item>modify call log</item>
-        <item>read calendar</item>
-        <item>modify calendar</item>
-        <item>access location</item>
-        <item>post notification</item>
-        <item>access location</item>
-        <item>make a phone call</item>
-        <item>read SMS messages</item>
-        <item>write/modify SMS messages</item>
-        <item>receive SMS</item>
-        <item>receive emergency SMS</item>
-        <item>receive MMS</item>
-        <item>receive WAP push</item>
-        <item>send SMS</item>
-        <item>read ICC SMS</item>
-        <item>write/modify ICC SMS</item>
-        <item>modify settings</item>
-        <item>draw on top of the screen</item>
-        <item>access notifications</item>
-        <item>access Camera</item>
-        <item>record audio</item>
-        <item>play audio</item>
-        <item>read clipboard</item>
-        <item>modify clipboard</item>
-        <item>use media buttons</item>
-        <item>use audio focus</item>
-        <item>use master volume</item>
-        <item>use voice volume</item>
-        <item>use ringer volume</item>
-        <item>use media volume</item>
-        <item>use alarm volume</item>
-        <item>use notification volume</item>
-        <item>use bluetooth volume</item>
-        <item>keep device awake</item>
-        <item>access location</item>
-        <item>access location</item>
-        <item>get usage stats</item>
-        <item>mute microphone</item>
-        <item>show a toast window</item>
-        <item>project media</item>
-        <item>activate VPN</item>
-        <item>turn on/off Wi-Fi</item>
-        <item>trun on/off Bluetooth</item>
-        <item>send MMS</item>
-        <item>read MMS storage</item>
-        <item>write MMS storage</item>
-        <item>start at bootup</item>
-        <item>turn on/off NFC</item>
-        <item>delete SMS</item>
-        <item>delete MMS</item>
-        <item>delete contacts</item>
-        <item>delete call log</item>
-        <item>turn on mobile data</item>
-    </string-array>
 
      <!-- Do not translate. Defines the mapping of notification package names
           from the actual triggering package to the user selectable package.
