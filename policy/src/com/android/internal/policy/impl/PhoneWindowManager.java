@@ -6108,7 +6108,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             return intent;
         }
 
-        return null;
+        return intent;
     }
 
     void startDockOrHome() {
