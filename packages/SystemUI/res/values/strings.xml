@@ -926,4 +926,8 @@
     <string name="heads_up_snooze_button_title">Snooze heads up</string>
     <string name="notification_inspect_heads_up_title_enabled">Enable heads up for this application</string>
     <string name="notification_inspect_heads_up_title_disabled">Disable heads up for this application</string>
+
+    <!-- Content description of the data connection type HSPA+ for accessibility (not shown on the screen). [CHAR LIMIT=NONE] -->
+    <string name="accessibility_data_connection_HP">HSPA+</string>
+
 </resources>
