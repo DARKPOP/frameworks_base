@@ -1986,6 +1986,22 @@ public final class Settings {
         public static final String NEXT_ALARM_FORMATTED = "next_alarm_formatted";
 
         /**
+         * Defines the shortcuts to be shown on lockscreen
+         * Usage is like this: target:icon|target:icon|target:icon
+         * if :icon is not set, default application icon will be used
+         * @hide
+         */
+        public static final String LOCKSCREEN_SHORTCUTS = "lockscreen_shortcuts";
+
+        /**
+         * Whether shorcuts open with normal or longpress
+         * @hide
+         */
+        public static final String LOCKSCREEN_SHORTCUTS_LONGPRESS =
+                "lockscreen_shortcuts_longpress";
+
+
+        /**
          * Scaling factor for fonts, float.
          */
         public static final String FONT_SCALE = "font_scale";
@@ -3095,7 +3111,7 @@ public final class Settings {
          * @hide
          */
         public static final String LONG_PRESS_KILL_DELAY = "long_press_kill_delay";
-	
+
 	/**
 	 * Clear Recents in navbar enabler
          * @hide
@@ -3113,7 +3129,7 @@ public final class Settings {
          * @hide
          */
         public static final String LOCKSCREEN_ENABLE_POWER_MENU = "lockscreen_enable_power_menu";
-	
+
         /**
 	 * Display style of the status bar battery information
          * 0: Display the battery an icon in portrait mode
