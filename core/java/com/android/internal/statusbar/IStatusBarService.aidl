@@ -60,10 +60,7 @@ interface IStatusBarService
     void toggleRecentApps();
     void preloadRecentApps();
     void cancelPreloadRecentApps();
-<<<<<<< HEAD
+    void showCustomIntentAfterKeyguard(inout Intent intent);
     void hideHeadsUpCandidate(String packageName);
     void scheduleHeadsUpClose();
-=======
->>>>>>> 696a3b0... Base : Initial slim lockscreen shortcuts
-    void showCustomIntentAfterKeyguard(inout Intent intent);
 }
