@@ -1658,6 +1658,7 @@
   <java-symbol type="string" name="aerr_application" />
   <java-symbol type="string" name="aerr_process" />
   <java-symbol type="string" name="aerr_title" />
+  <java-symbol type="string" name="android_upgrading_fstrim" />
   <java-symbol type="string" name="android_upgrading_apk" />
   <java-symbol type="string" name="android_upgrading_complete" />
   <java-symbol type="string" name="android_upgrading_starting_apps" />
@@ -1769,6 +1770,16 @@
   <java-symbol type="string" name="config_defaultNetworkScorerPackageName" />
   <java-symbol type="string" name="config_persistentDataPackageName" />
 
+  <!-- Profiles -->
+  <java-symbol type="xml" name="profile_default" />
+  <java-symbol type="string" name="wildcardProfile" />
+  <java-symbol type="string" name="profile_picker_title" />
+  <java-symbol type="string" name="profile_none" />
+  <java-symbol type="string" name="global_action_choose_profile" />
+  <java-symbol type="drawable" name="ic_lock_profile" />
+
+  <java-symbol type="string" name="global_action_choose_profile" />
+  <java-symbol type="drawable" name="ic_lock_profile" />
   <java-symbol type="layout" name="resolver_list" />
   <java-symbol type="id" name="resolver_list" />
   <java-symbol type="id" name="button_once" />
@@ -2150,4 +2161,14 @@
   <java-symbol type="string" name="adb_net_active_notification_title" />
   <java-symbol type="string" name="adb_both_active_notification_title" />
   <java-symbol type="string" name="adb_active_generic_notification_message" />
+
+  <!-- Proximity check on screen on -->
+  <java-symbol type="bool" name="config_proximityCheckOnWake" />
+
+  <!-- Proximity check timeout -->
+  <java-symbol type="integer" name="config_proximityCheckTimeout" />
+
+  <!-- Power menu -->
+  <java-symbol type="drawable" name="ic_lock_settings" />
+
 </resources>

@@ -125,11 +125,13 @@ import com.android.internal.statusbar.StatusBarIcon;
 import com.android.keyguard.KeyguardHostView.OnDismissAction;
 import com.android.keyguard.ViewMediatorCallback;
 import com.android.systemui.BatteryMeterView;
+import com.android.systemui.BatteryMeterView.BatteryMeterMode;
 import com.android.systemui.BatteryLevelTextView;
 import com.android.systemui.DemoMode;
 import com.android.systemui.EventLogTags;
 import com.android.systemui.FontSizeUtils;
 import com.android.systemui.R;
+import com.android.systemui.recents.RecentsActivity;
 import com.android.systemui.doze.DozeHost;
 import com.android.systemui.doze.DozeLog;
 import com.android.systemui.keyguard.KeyguardViewMediator;
@@ -251,6 +253,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     BluetoothControllerImpl mBluetoothController;
     SecurityControllerImpl mSecurityController;
     BatteryController mBatteryController;
+    private BatteryMeterView mBatteryView;
+    private BatteryLevelTextView mBatteryTextView;
     LocationControllerImpl mLocationController;
     NetworkControllerImpl mNetworkController;
     HotspotControllerImpl mHotspotController;
@@ -424,6 +428,10 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.BATTERY_SAVER_MODE_COLOR),
                     false, this, UserHandle.USER_ALL);
+            //resolver.registerContentObserver(Settings.System.getUriFor(
+            //        Settings.System.STATUS_BAR_BATTERY_STYLE), false, this);
+            //resolver.registerContentObserver(Settings.System.getUriFor(
+            //        Settings.System.STATUS_BAR_SHOW_BATTERY_PERCENT), false, this);
             update();
         }
 
@@ -481,6 +489,49 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             mAutomaticBrightness = mode != Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL;
             mBrightnessControl = Settings.System.getInt(
                     resolver, Settings.System.STATUS_BAR_BRIGHTNESS_CONTROL, 0) == 1;
+            mTickerEnabled = Settings.System.getIntForUser(
+                    resolver, Settings.System.STATUS_BAR_TICKER_ENABLED,
+                    mContext.getResources().getBoolean(R.bool.enable_ticker)
+                            ? 1 : 0, UserHandle.USER_CURRENT) == 1;
+/*
+            boolean showInsidePercent = Settings.System.getIntForUser(resolver,
+                    Settings.System.STATUS_BAR_SHOW_BATTERY_PERCENT, 0, mCurrentUserId) == 1;
+
+            //boolean showNextPercent = Settings.System.getIntForUser(resolver,
+            //        Settings.System.STATUS_BAR_SHOW_BATTERY_PERCENT, 0, mCurrentUserId) == 2;
+
+            int batteryStyle = Settings.System.getIntForUser(resolver,
+                    Settings.System.STATUS_BAR_BATTERY_STYLE, 0, mCurrentUserId);
+            BatteryMeterMode meterMode = BatteryMeterMode.BATTERY_METER_ICON_PORTRAIT;
+            switch (batteryStyle) {
+                case 2:
+                    meterMode = BatteryMeterMode.BATTERY_METER_CIRCLE;
+                    break;
+
+                case 4:
+                    meterMode = BatteryMeterMode.BATTERY_METER_GONE;
+                    //showNextPercent = false;
+                    break;
+
+                case 5:
+                    meterMode = BatteryMeterMode.BATTERY_METER_ICON_LANDSCAPE;
+                    break;
+
+                case 6:
+                    meterMode = BatteryMeterMode.BATTERY_METER_TEXT;
+                    showInsidePercent = false;
+                    //showNextPercent = true;
+                    break;
+
+                default:
+                    break;
+            }
+
+            // Update Battery
+            mBatteryView.setMode(meterMode);
+            mBatteryView.setShowPercent(showInsidePercent);
+            //mBatteryTextView.setShowPercent(showNextPercent);
+*/
         }
     }
 
@@ -815,6 +866,8 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
             // no window manager? good luck with that
         }
 
+        RecentsActivity.setNavigationBarView(mNavigationBarView);
+
         // figure out which pixel-format to use for the status bar.
         mPixelFormat = PixelFormat.OPAQUE;
 
@@ -1016,10 +1069,10 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mUserInfoController.reloadUserInfo();
 
         mHeader.setBatteryController(mBatteryController);
-        ((BatteryMeterView) mStatusBarView.findViewById(R.id.battery)).setBatteryController(
-                mBatteryController);
-        ((BatteryLevelTextView) mStatusBarView.findViewById(R.id.battery_level_text))
-                .setBatteryController(mBatteryController);
+        mBatteryView = (BatteryMeterView) mStatusBarView.findViewById(R.id.battery);
+        mBatteryView.setBatteryController(mBatteryController);
+        mBatteryTextView = (BatteryLevelTextView) mStatusBarView.findViewById(R.id.battery_level_text);
+        mBatteryTextView.setBatteryController(mBatteryController);
         mKeyguardStatusBar.setBatteryController(mBatteryController);
         mHeader.setNextAlarmController(mNextAlarmController);
 
@@ -1243,7 +1296,11 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
     private View.OnClickListener mRecentsClickListener = new View.OnClickListener() {
         public void onClick(View v) {
             awakenDreams();
-            toggleRecentApps();
+            if(isRecentAppsVisible() && hasRecentApps() && clearAllRecentsNavbarEnabled()) {
+                clearRecentApps();
+            } else {
+                toggleRecentApps();
+            }
         }
     };
 
@@ -3459,6 +3516,13 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         resetUserSetupObserver();
         setControllerUsers();
     }
+
+    /** Check if Clear All Recents is enabled */
+    public boolean clearAllRecentsNavbarEnabled() {
+        return Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.CLEAR_ALL_RECENTS_NAVBAR_ENABLED, 1) != 0;
+    }
+
 
     private void setControllerUsers() {
         if (mZenModeController != null) {

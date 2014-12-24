@@ -21,6 +21,8 @@ import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.annotation.SystemApi;
 import android.app.PendingIntent;
+import android.app.ProfileGroup;
+import android.app.ProfileManager;
 import android.bluetooth.BluetoothDevice;
 import android.content.ComponentName;
 import android.content.Context;
@@ -68,6 +70,7 @@ public class AudioManager {
     private final boolean mUseFixedVolume;
     private final Binder mToken = new Binder();
     private static String TAG = "AudioManager";
+    private final ProfileManager mProfileManager;
     AudioPortEventHandler mAudioPortEventHandler;
     private final WindowManager mWindowManager;
 
@@ -594,6 +597,8 @@ public class AudioManager {
         mUseFixedVolume = mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_useFixedVolume);
         mWindowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        mProfileManager = (ProfileManager) context.getSystemService(Context.PROFILE_SERVICE);
+
     }
 
     private static IAudioService getService()
@@ -1255,6 +1260,26 @@ public class AudioManager {
      * current ringer mode that can be queried via {@link #getRingerMode()}.
      */
     public boolean shouldVibrate(int vibrateType) {
+        String packageName = mContext.getPackageName();
+        // Don't apply profiles for "android" context, as these could
+        // come from the NotificationManager, and originate from a real package.
+        if (!packageName.equals("android")) {
+            ProfileGroup profileGroup = mProfileManager.getActiveProfileGroup(packageName);
+            if (profileGroup != null) {
+                Log.v(TAG, "shouldVibrate, group: " + profileGroup.getUuid()
+                        + " mode: " + profileGroup.getVibrateMode());
+                switch (profileGroup.getVibrateMode()) {
+                    case OVERRIDE :
+                        return true;
+                    case SUPPRESS :
+                        return false;
+                    case DEFAULT :
+                    // Drop through
+                }
+            }
+        } else {
+            Log.v(TAG, "Not applying override for 'android' package");
+        }
         IAudioService service = getService();
         try {
             return service.shouldVibrate(vibrateType);

@@ -1835,7 +1835,9 @@ public final class ActivityManagerService extends ActivityManagerNative
                 break;
             }
             case REQUEST_ALL_PSS_MSG: {
-                requestPssAllProcsLocked(SystemClock.uptimeMillis(), true, false);
+                synchronized (ActivityManagerService.this) {
+                    requestPssAllProcsLocked(SystemClock.uptimeMillis(), true, false);
+                }
                 break;
             }
             case POST_PRIVACY_NOTIFICATION_MSG: {
@@ -3104,12 +3106,12 @@ public final class ActivityManagerService extends ActivityManagerNative
         if (app == null) {
             checkTime(startTime, "startProcess: creating new process record");
             app = newProcessRecordLocked(info, processName, isolated, isolatedUid);
-            app.crashHandler = crashHandler;
             if (app == null) {
                 Slog.w(TAG, "Failed making new process record for "
                         + processName + "/" + info.uid + " isolated=" + isolated);
                 return null;
             }
+            app.crashHandler = crashHandler;
             mProcessNames.put(processName, app.uid, app);
             if (isolated) {
                 mIsolatedProcesses.put(app.uid, app);
@@ -4937,9 +4939,11 @@ public final class ActivityManagerService extends ActivityManagerNative
             stats.noteProcessDiedLocked(app.info.uid, pid);
         }
 
-        Process.killProcessQuiet(pid);
-        Process.killProcessGroup(app.info.uid, pid);
-        app.killed = true;
+        if (!app.killed) {
+            Process.killProcessQuiet(pid);
+            Process.killProcessGroup(app.info.uid, pid);
+            app.killed = true;
+        }
 
         // Clean up already done if the process has been re-started.
         if (app.pid == pid && app.thread != null &&
@@ -6163,6 +6167,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         app.hasShownUi = false;
         app.debugging = false;
         app.cached = false;
+        app.killedByAm = false;
 
         mHandler.removeMessages(PROC_START_TIMEOUT_MSG, app);
 
@@ -9444,9 +9449,9 @@ public final class ActivityManagerService extends ActivityManagerNative
                             "Attempt to launch content provider before system ready");
                 }
 
-                // Make sure that the user who owns this provider is started.  If not,
+                // Make sure that the user who owns this provider is running.  If not,
                 // we don't want to allow it to run.
-                if (mStartedUsers.get(userId) == null) {
+                if (!isUserRunningLocked(userId, false)) {
                     Slog.w(TAG, "Unable to launch app "
                             + cpi.applicationInfo.packageName + "/"
                             + cpi.applicationInfo.uid + " for provider "
@@ -9536,11 +9541,13 @@ public final class ActivityManagerService extends ActivityManagerNative
                             if (DEBUG_PROVIDER) {
                                 Slog.d(TAG, "Installing in existing process " + proc);
                             }
-                            checkTime(startTime, "getContentProviderImpl: scheduling install");
-                            proc.pubProviders.put(cpi.name, cpr);
-                            try {
-                                proc.thread.scheduleInstallProvider(cpi);
-                            } catch (RemoteException e) {
+                            if (!proc.pubProviders.containsKey(cpi.name)) {
+                                checkTime(startTime, "getContentProviderImpl: scheduling install");
+                                proc.pubProviders.put(cpi.name, cpr);
+                                try {
+                                    proc.thread.scheduleInstallProvider(cpi);
+                                } catch (RemoteException e) {
+                                }
                             }
                         } else {
                             checkTime(startTime, "getContentProviderImpl: before start process");
@@ -10104,10 +10111,9 @@ public final class ActivityManagerService extends ActivityManagerNative
             } finally {
                 // Ensure that whatever happens, we clean up the identity state
                 sCallerIdentity.remove();
+                // Ensure we're done with the provider.
+                removeContentProviderExternalUnchecked(name, null, userId);
             }
-
-            // We've got the fd now, so we're done with the provider.
-            removeContentProviderExternalUnchecked(name, null, userId);
         } else {
             Slog.d(TAG, "Failed to get provider for authority '" + name + "'");
         }
@@ -15512,10 +15518,10 @@ public final class ActivityManagerService extends ActivityManagerNative
         userId = handleIncomingUser(callingPid, callingUid, userId,
                 true, ALLOW_NON_FULL, "broadcast", callerPackage);
 
-        // Make sure that the user who is receiving this broadcast is started.
+        // Make sure that the user who is receiving this broadcast is running.
         // If not, we will just skip it.
 
-        if (userId != UserHandle.USER_ALL && mStartedUsers.get(userId) == null) {
+        if (userId != UserHandle.USER_ALL && !isUserRunningLocked(userId, false)) {
             if (callingUid != Process.SYSTEM_UID || (intent.getFlags()
                     & Intent.FLAG_RECEIVER_BOOT_UPGRADE) == 0) {
                 Slog.w(TAG, "Skipping broadcast of " + intent

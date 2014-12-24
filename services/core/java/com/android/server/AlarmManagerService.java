@@ -67,6 +67,7 @@ import static android.app.AlarmManager.RTC_WAKEUP;
 import static android.app.AlarmManager.RTC;
 import static android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP;
 import static android.app.AlarmManager.ELAPSED_REALTIME;
+import static android.app.AlarmManager.RTC_POWEROFF_WAKEUP;
 
 import com.android.internal.util.LocalLog;
 
@@ -75,12 +76,18 @@ class AlarmManagerService extends SystemService {
     // warning message.  The time duration is in milliseconds.
     private static final long LATE_ALARM_THRESHOLD = 10 * 1000;
 
+    // The threshold for the power off alarm time can be set. The time
+    // duration is in milliseconds.
+    private static final long POWER_OFF_ALARM_THRESHOLD = 120 * 1000;
+
     private static final int RTC_WAKEUP_MASK = 1 << RTC_WAKEUP;
     private static final int RTC_MASK = 1 << RTC;
     private static final int ELAPSED_REALTIME_WAKEUP_MASK = 1 << ELAPSED_REALTIME_WAKEUP;
     private static final int ELAPSED_REALTIME_MASK = 1 << ELAPSED_REALTIME;
+    private static final int RTC_POWEROFF_WAKEUP_MASK = 1 << RTC_POWEROFF_WAKEUP;
     static final int TIME_CHANGED_MASK = 1 << 16;
-    static final int IS_WAKEUP_MASK = RTC_WAKEUP_MASK|ELAPSED_REALTIME_WAKEUP_MASK;
+    static final int IS_WAKEUP_MASK = RTC_WAKEUP_MASK|ELAPSED_REALTIME_WAKEUP_MASK
+            |RTC_POWEROFF_WAKEUP_MASK;
 
     // Mask for testing whether a given alarm type is wakeup vs non-wakeup
     static final int TYPE_NONWAKEUP_MASK = 0x1; // low bit => non-wakeup
@@ -109,6 +116,7 @@ class AlarmManagerService extends SystemService {
 
     long mNativeData;
     private long mNextWakeup;
+    private long mNextRtcWakeup;
     private long mNextNonWakeup;
     int mBroadcastRefCount = 0;
     PowerManager.WakeLock mWakeLock;
@@ -119,6 +127,7 @@ class AlarmManagerService extends SystemService {
     ClockReceiver mClockReceiver;
     InteractiveStateReceiver mInteractiveStateReceiver;
     private UninstallReceiver mUninstallReceiver;
+    private QuickBootReceiver mQuickBootReceiver;
     final ResultReceiver mResultReceiver = new ResultReceiver();
     PendingIntent mTimeTickSender;
     PendingIntent mDateChangeSender;
@@ -200,6 +209,14 @@ class AlarmManagerService extends SystemService {
 
         Alarm get(int index) {
             return alarms.get(index);
+        }
+
+        long getWhenByElapsedTime(long whenElapsed) {
+            for(int i=0;i< alarms.size();i++) {
+                if(alarms.get(i).whenElapsed == whenElapsed)
+                    return alarms.get(i).when;
+            }
+            return 0;
         }
 
         boolean canHold(long whenElapsed, long maxWhen) {
@@ -344,6 +361,18 @@ class AlarmManagerService extends SystemService {
             return false;
         }
 
+        boolean isRtcPowerOffWakeup() {
+            final int N = alarms.size();
+            for (int i = 0; i < N; i++) {
+                Alarm a = alarms.get(i);
+                // non-wakeup alarms are types 1 and 3, i.e. have the low bit set
+                if (a.type == RTC_POWEROFF_WAKEUP) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         @Override
         public String toString() {
             StringBuilder b = new StringBuilder(40);
@@ -442,7 +471,7 @@ class AlarmManagerService extends SystemService {
     }
 
     static long convertToElapsed(long when, int type) {
-        final boolean isRtc = (type == RTC || type == RTC_WAKEUP);
+        final boolean isRtc = (type == RTC || type == RTC_WAKEUP  || type == RTC_POWEROFF_WAKEUP);
         if (isRtc) {
             when -= System.currentTimeMillis() - SystemClock.elapsedRealtime();
         }
@@ -591,7 +620,7 @@ class AlarmManagerService extends SystemService {
     @Override
     public void onStart() {
         mNativeData = init();
-        mNextWakeup = mNextNonWakeup = 0;
+        mNextWakeup = mNextRtcWakeup = mNextNonWakeup = 0;
 
         // We have to set current TimeZone info to kernel
         // because kernel doesn't keep this after reboot
@@ -616,6 +645,7 @@ class AlarmManagerService extends SystemService {
         mClockReceiver.scheduleDateChangedEvent();
         mInteractiveStateReceiver = new InteractiveStateReceiver();
         mUninstallReceiver = new UninstallReceiver();
+        mQuickBootReceiver = new QuickBootReceiver();
         
         if (mNativeData != 0) {
             AlarmThread waitThread = new AlarmThread();
@@ -696,7 +726,7 @@ class AlarmManagerService extends SystemService {
             windowLength = AlarmManager.INTERVAL_HOUR;
         }
 
-        if (type < RTC_WAKEUP || type > ELAPSED_REALTIME) {
+        if (type < RTC_WAKEUP || type > RTC_POWEROFF_WAKEUP) {
             throw new IllegalArgumentException("Invalid alarm type " + type);
         }
 
@@ -787,7 +817,7 @@ class AlarmManagerService extends SystemService {
             }
 
             setImpl(type, triggerAtTime, windowLength, interval, operation,
-                    false, workSource, alarmClock);
+                    windowLength == AlarmManager.WINDOW_EXACT, workSource, alarmClock);
         }
 
         @Override
@@ -1075,6 +1105,18 @@ class AlarmManagerService extends SystemService {
         return null;
     }
 
+    private Batch findFirstRtcWakeupBatchLocked() {
+        final int N = mAlarmBatches.size();
+        for (int i = 0; i < N; i++) {
+            Batch b = mAlarmBatches.get(i);
+            long intervalTime  = b.start - SystemClock.elapsedRealtime();
+            if (b.isRtcPowerOffWakeup() && intervalTime > POWER_OFF_ALARM_THRESHOLD) {
+                return b;
+            }
+        }
+        return null;
+    }
+
     private AlarmManager.AlarmClockInfo getNextAlarmClockImpl(int userId) {
         synchronized (mLock) {
             return mNextAlarmClockForUser.get(userId);
@@ -1210,9 +1252,18 @@ class AlarmManagerService extends SystemService {
         if (mAlarmBatches.size() > 0) {
             final Batch firstWakeup = findFirstWakeupBatchLocked();
             final Batch firstBatch = mAlarmBatches.get(0);
+            final Batch firstRtcWakeup = findFirstRtcWakeupBatchLocked();
             if (firstWakeup != null && mNextWakeup != firstWakeup.start) {
                 mNextWakeup = firstWakeup.start;
                 setLocked(ELAPSED_REALTIME_WAKEUP, firstWakeup.start);
+            }
+            if (firstRtcWakeup != null && mNextRtcWakeup != firstRtcWakeup.start) {
+                mNextRtcWakeup = firstRtcWakeup.start;
+                long when = firstRtcWakeup.getWhenByElapsedTime(mNextRtcWakeup);
+
+                if (when != 0) {
+                    setLocked(RTC_POWEROFF_WAKEUP, when);
+                }
             }
             if (firstBatch != firstWakeup) {
                 nextNonWakeup = firstBatch.start;
@@ -1364,6 +1415,7 @@ class AlarmManagerService extends SystemService {
         case RTC_WAKEUP : return "RTC_WAKEUP";
         case ELAPSED_REALTIME : return "ELAPSED";
         case ELAPSED_REALTIME_WAKEUP: return "ELAPSED_WAKEUP";
+        case RTC_POWEROFF_WAKEUP : return "RTC_POWEROFF_WAKEUP";
         default:
             break;
         }
@@ -1425,12 +1477,9 @@ class AlarmManagerService extends SystemService {
                             maxTriggerTime(nowELAPSED, nextElapsed, alarm.repeatInterval),
                             alarm.repeatInterval, alarm.operation, batch.standalone, true,
                             alarm.workSource, alarm.alarmClock, alarm.userId);
+                }
 
-                    // For now we count this as a wakeup alarm, meaning it needs to be
-                    // delivered immediately.  In the future we should change this, but
-                    // that required delaying when we reschedule the repeat...!
-                    hasWakeup = false;
-                } else if (alarm.wakeup) {
+                if (alarm.wakeup) {
                     hasWakeup = true;
                 }
 
@@ -1494,7 +1543,8 @@ class AlarmManagerService extends SystemService {
                 AlarmManager.AlarmClockInfo _info, int _userId) {
             type = _type;
             wakeup = _type == AlarmManager.ELAPSED_REALTIME_WAKEUP
-                    || _type == AlarmManager.RTC_WAKEUP;
+                    || _type == AlarmManager.RTC_WAKEUP
+                    || _type == AlarmManager.RTC_POWEROFF_WAKEUP;
             when = _when;
             whenElapsed = _whenElapsed;
             windowLength = _windowLength;
@@ -1509,7 +1559,7 @@ class AlarmManagerService extends SystemService {
 
         public static String makeTag(PendingIntent pi, int type) {
             return pi.getTag(type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP
-                    ? "*walarm*:" : "*alarm*:");
+                    || type == RTC_POWEROFF_WAKEUP ? "*walarm*:" : "*alarm*:");
         }
 
         @Override
@@ -1529,7 +1579,8 @@ class AlarmManagerService extends SystemService {
 
         public void dump(PrintWriter pw, String prefix, long nowRTC, long nowELAPSED,
                 SimpleDateFormat sdf) {
-            final boolean isRtc = (type == RTC || type == RTC_WAKEUP);
+            final boolean isRtc = (type == RTC || type == RTC_WAKEUP
+                    || type == RTC_POWEROFF_WAKEUP);
             pw.print(prefix); pw.print("tag="); pw.println(tag);
             pw.print(prefix); pw.print("type="); pw.print(type);
                     pw.print(" whenElapsed="); TimeUtils.formatDuration(whenElapsed,
@@ -1638,7 +1689,8 @@ class AlarmManagerService extends SystemService {
                     fs.nesting++;
                 }
                 if (alarm.type == ELAPSED_REALTIME_WAKEUP
-                        || alarm.type == RTC_WAKEUP) {
+                        || alarm.type == RTC_WAKEUP
+                        || alarm.type == RTC_POWEROFF_WAKEUP) {
                     bs.numWakeup++;
                     fs.numWakeup++;
                     if (alarm.workSource != null && alarm.workSource.size() > 0) {
@@ -1660,6 +1712,22 @@ class AlarmManagerService extends SystemService {
                 }
             } catch (RuntimeException e) {
                 Slog.w(TAG, "Failure sending alarm.", e);
+            }
+        }
+    }
+
+    private void filtQuickBootAlarms(ArrayList<Alarm> triggerList) {
+
+        ArrayList<String> whiteList = new ArrayList();
+        whiteList.add("android");
+        whiteList.add("com.android.deskclock");
+
+        for (int i = triggerList.size() - 1; i >= 0; i--) {
+            Alarm alarm = triggerList.get(i);
+
+            if (!whiteList.contains(alarm.operation.getTargetPackage())) {
+                triggerList.remove(i);
+                Slog.v(TAG, "ignore -> " + alarm.operation.getTargetPackage());
             }
         }
     }
@@ -1721,6 +1789,11 @@ class AlarmManagerService extends SystemService {
                     }
 
                     boolean hasWakeup = triggerAlarmsLocked(triggerList, nowELAPSED, nowRTC);
+
+                    if (SystemProperties.getInt("sys.quickboot.enable", 0) == 1) {
+                        filtQuickBootAlarms(triggerList);
+                    }
+
                     if (!hasWakeup && checkAllowNonWakeupDelayLocked(nowELAPSED)) {
                         // if there are no wakeup alarms and the screen is off, we can
                         // delay what we have so far until the future.
@@ -1829,7 +1902,39 @@ class AlarmManagerService extends SystemService {
             }
         }
     }
-    
+
+    private class QuickBootReceiver extends BroadcastReceiver {
+        static final String ACTION_APP_KILL = "org.codeaurora.quickboot.appkilled";
+
+        public QuickBootReceiver() {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ACTION_APP_KILL);
+            getContext().registerReceiver(this, filter,
+                    "android.permission.DEVICE_POWER", null);
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            String pkgList[] = null;
+            if (ACTION_APP_KILL.equals(action)) {
+                pkgList = intent.getStringArrayExtra(Intent.EXTRA_PACKAGES);
+                if (pkgList != null && (pkgList.length > 0)) {
+                    for (String pkg : pkgList) {
+                        removeLocked(pkg);
+                        for (int i=mBroadcastStats.size()-1; i>=0; i--) {
+                            ArrayMap<String, BroadcastStats> uidStats = mBroadcastStats.valueAt(i);
+                            if (uidStats.remove(pkg) != null) {
+                                if (uidStats.size() <= 0) {
+                                    mBroadcastStats.removeAt(i);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     class ClockReceiver extends BroadcastReceiver {
         public ClockReceiver() {
             IntentFilter filter = new IntentFilter();
