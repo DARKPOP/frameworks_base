@@ -2382,7 +2382,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             ConfigurationInfo.GL_ES_VERSION_UNDEFINED);
 
         mConfiguration.setToDefaults();
-        mConfiguration.setLocale(Locale.getDefault());
+        mConfiguration.locale = Locale.getDefault();
 
         mConfigurationSeq = mConfiguration.seq = 1;
         mProcessCpuTracker.init();
@@ -16291,6 +16291,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         Configuration ci;
         synchronized(this) {
             ci = new Configuration(mConfiguration);
+            ci.userSetLocale = false;
         }
         return ci;
     }
