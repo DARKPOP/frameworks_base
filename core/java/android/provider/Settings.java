@@ -5711,6 +5711,12 @@ public final class Settings {
         public static final String SEARCH_PANEL_ENABLED = "search_panel_enabled";
 
         /**
+         * Whether to show four tiles per row.
+         * @hide
+         */
+        public static final String QS_USE_FOUR_COLUMNS = "qs_use_four_columns";
+
+        /**
          * This are the settings to be backed up.
          *
          * NOTE: Settings are backed up and restored in the order they appear
