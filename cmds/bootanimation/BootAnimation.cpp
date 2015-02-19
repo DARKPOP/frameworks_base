@@ -579,6 +579,7 @@ bool BootAnimation::movie()
     for (size_t i=0 ; i<pcount ; i++) {
         const Animation::Part& part(animation.parts[i]);
         const size_t fcount = part.frames.size();
+        glBindTexture(GL_TEXTURE_2D, 0);
 
         for (int r=0 ; !part.count || r<part.count ; r++) {
             // Exit any non playuntil complete parts immediately
@@ -590,7 +591,6 @@ bool BootAnimation::movie()
                 mAudioPlayer->playFile(part.audioFile);
             }
 
-            glBindTexture(GL_TEXTURE_2D, 0);
             glClearColor(
                     part.backgroundColor[0],
                     part.backgroundColor[1],
@@ -601,9 +601,19 @@ bool BootAnimation::movie()
                 const Animation::Frame& frame(part.frames[j]);
                 nsecs_t lastFrame = systemTime();
 
-                initTexture(
-                        frame.map->getDataPtr(),
-                        frame.map->getDataLength());
+                if (r > 0) {
+                    glBindTexture(GL_TEXTURE_2D, frame.tid);
+                } else {
+                    if (part.count != 1) {
+                        glGenTextures(1, &frame.tid);
+                        glBindTexture(GL_TEXTURE_2D, frame.tid);
+                        glTexParameterx(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                        glTexParameterx(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                    }
+                    initTexture(
+                            frame.map->getDataPtr(),
+                            frame.map->getDataLength());
+                }
 
                 if (!clearReg.isEmpty()) {
                     Region::const_iterator head(clearReg.begin());
@@ -643,6 +653,14 @@ bool BootAnimation::movie()
             // For infinite parts, we've now played them at least once, so perhaps exit
             if(exitPending() && !part.count)
                 break;
+        }
+
+        // free the textures for this part
+        if (part.count != 1) {
+            for (size_t j=0 ; j<fcount ; j++) {
+                const Animation::Frame& frame(part.frames[j]);
+                glDeleteTextures(1, &frame.tid);
+            }
         }
     }
 
