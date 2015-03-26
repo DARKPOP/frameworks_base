@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-/*
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+** Not a Contribution.
+**
 ** Copyright 2009, The Android Open Source Project
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -2037,4 +2039,5 @@
     <!-- Timeout in MS for how long you have to long-press the back button to
          kill the foreground app. -->
     <integer name="config_backKillTimeout">1000</integer>
+
 </resources>
