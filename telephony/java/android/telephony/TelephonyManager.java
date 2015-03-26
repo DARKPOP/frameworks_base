@@ -3665,7 +3665,7 @@ public class TelephonyManager {
                 }
             }
             Log.d(TAG, "setDataEnabled: enabled=" + enable);
-            getITelephony().setDataEnabled(enable);
+            getITelephony().setDataEnabled(subId, enable);
         } catch (RemoteException e) {
             Log.e(TAG, "Error calling setDataEnabled", e);
         }
