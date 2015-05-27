@@ -1432,6 +1432,11 @@ final class WindowState implements WindowManagerPolicy.WindowState {
             mWinAnimator.mSurfaceResized = false;
             return true;
         } catch (RemoteException e) {
+            mOverscanInsetsChanged = false;
+            mContentInsetsChanged = false;
+            mVisibleInsetsChanged = false;
+            mStableInsetsChanged = false;
+            mWinAnimator.mSurfaceResized = false;
             mOrientationChanging = false;
             if (DEBUG_RESIZE || DEBUG_ORIENTATION || DEBUG_CONFIGURATION) {
                 Slog.i(TAG, "Fail to resize window " + this + ": " + e);
