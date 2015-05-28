@@ -368,6 +368,12 @@ void Caches::flush(FlushMode mode) {
 
     clearGarbage();
     glFinish();
+
+    // glFinish() need dequeue buffer, and it is not 100% success
+    // It generates gl error sometimes, this error will be there
+    // until glGetError called. Call glGetError to clean the error
+    // in case it leaks to other functions
+    glGetError();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
