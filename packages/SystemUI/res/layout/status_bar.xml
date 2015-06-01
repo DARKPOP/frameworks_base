@@ -69,8 +69,9 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:textAppearance="@style/TextAppearance.StatusBar.CarrierLabel"
+                    android:visibility="gone"
                     android:singleLine="true"
-                    android:ellipsize="end"/>
+                />
 
                 <com.android.systemui.statusbar.StatusBarIconView android:id="@+id/moreIcon"
                     android:layout_width="@dimen/status_bar_icon_size"
@@ -93,7 +94,7 @@
             android:orientation="horizontal"
             >
 
- 	<com.android.systemui.statusbar.policy.NetworkTraffic
+            <com.android.systemui.statusbar.policy.NetworkTraffic
                 android:id="@+id/networkTraffic"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
